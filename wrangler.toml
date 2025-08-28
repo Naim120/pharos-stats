@@ -1,0 +1,9 @@
+name = "pharos-stats"
+compatibility_date = "2025-08-28"
+
+[build]
+upload = { format = "service-worker" }
+
+[functions]
+directory = "functions"
+
