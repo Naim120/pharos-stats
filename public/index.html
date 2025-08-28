@@ -235,7 +235,7 @@
 
       profileBox.innerHTML = "<p>⏳ Fetching data...</p>";
       try {
-        const res = await fetch(`/functions/getUser?address=${wallet}`);
+        const res = await fetch(`${WORKER_URL}?address=${wallet}`);
         const data = await res.json();
 
         if (!data.data || !data.data.user_info) {
