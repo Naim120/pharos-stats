@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pharos Wallet Lookup</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #fff;
+      background: rgb(0, 7, 185);
+    }
+
+    /* Background video */
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -2;
+    }
+
+    /* Overlay gradient */
+    .bg-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, rgba(0,7,185,0.6), rgba(0,7,185,0.9));
+      z-index: -1;
+    }
+
+    .container {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 25px 30px;
+      width: 420px;
+      max-width: 95%;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      margin: 20px 0;
+      animation: fadeIn 0.7s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      width: 120px;
+      margin-bottom: 15px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 1.7rem;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .profile {
+      margin-top: 20px;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .profile h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .level-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .level-badge img {
+      width: 42px;
+      height: 42px;
+    }
+
+    .progress {
+      margin-top: 15px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 12px;
+      height: 14px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff88, #00c6ff);
+      width: 0%;
+      transition: width 0.6s ease-in-out;
+    }
+
+    .levels {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .level-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      background: rgba(255,255,255,0.15);
+      padding: 10px 14px;
+      border-radius: 14px;
+      transition: transform 0.2s ease;
+    }
+
+    .level-item:hover {
+      transform: scale(1.02);
+    }
+
+    .level-item img {
+      width: 38px;
+      height: 38px;
+    }
+
+    .highlight {
+      background: rgba(0,255,136,0.3) !important;
+      font-weight: bold;
+      border: 1px solid #00ff88;
+    }
+  </style>
+</head>
+<body>
+  <video autoplay muted loop id="bg-video">
+    <source src="https://testnet.pharosnetwork.xyz/images/banner.mp4" type="video/mp4">
+  </video>
+  <div class="bg-overlay"></div>
+
+  <div class="container">
+    <div class="card">
+      <img src="assets/pharos.png" alt="Pharos Logo" class="logo">
+      <h1>Pharos Wallet Lookup</h1>
+      <input type="text" id="wallet" placeholder="Enter wallet address" />
+      <button onclick="fetchProfile()">Lookup</button>
+      <div id="profile"></div>
+    </div>
+
+    <div class="card">
+      <h2>🔹 Levels Info</h2>
+      <div id="levels"></div>
+    </div>
+  </div>
+
+  <script>
+    const LEVELS = [
+      { name: "Lv.1", icon: "https://static.pharosnetwork.xyz/progress/level1.png", min: 0, max: 1000 },
+      { name: "Lv.2", icon: "https://static.pharosnetwork.xyz/progress/level2.png", min: 1001, max: 3500 },
+      { name: "Lv.3", icon: "https://static.pharosnetwork.xyz/progress/level3.png", min: 3501, max: 6000 },
+      { name: "Lv.4", icon: "https://static.pharosnetwork.xyz/progress/level4.png", min: 6001, max: 10000 },
+      { name: "Lv.5", icon: "https://static.pharosnetwork.xyz/progress/level5.png", min: 10001, max: 20000 }
+    ];
+
+    function renderLevels(currentPoints = null) {
+      const container = document.getElementById("levels");
+      container.innerHTML = "";
+      LEVELS.forEach(level => {
+        const div = document.createElement("div");
+        div.className = "level-item";
+
+        if (currentPoints && currentPoints >= level.min && currentPoints <= level.max) {
+          div.classList.add("highlight");
+        }
+
+        div.innerHTML = `
+          <img src="${level.icon}" alt="${level.name}">
+          <div>
+            <strong>${level.name}</strong><br>
+            ${level.min} – ${level.max} pts
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    renderLevels();
+
+    async function fetchProfile() {
+      const wallet = document.getElementById("wallet").value.trim();
+      const profileBox = document.getElementById("profile");
+      if (!wallet) {
+        profileBox.innerHTML = "<p>⚠️ Please enter a wallet address.</p>";
+        return;
+      }
+
+      profileBox.innerHTML = "<p>⏳ Fetching data...</p>";
+      try {
+        const res = await fetch(`/api/getUser?address=${wallet}`);
+        const data = await res.json();
+
+        if (!data.data || !data.data.user_info) {
+          profileBox.innerHTML = "<p>❌ No data found.</p>";
+          return;
+        }
+
+        const user = data.data.user_info;
+        let userLevel = LEVELS.find(l => user.TotalPoints >= l.min && user.TotalPoints <= l.max);
+
+        // progress calc
+        let progressPercent = 0;
+        if (userLevel) {
+          const range = userLevel.max - userLevel.min;
+          const progress = user.TotalPoints - userLevel.min;
+          progressPercent = Math.min(100, (progress / range) * 100);
+        }
+
+        profileBox.innerHTML = `
+          <div class="profile">
+            <h2>Wallet: ${user.Address}</h2>
+            <p><strong>Wallet Type:</strong> ${user.Wallet || "N/A"}</p>
+            <p><strong>Total Points:</strong> ${user.TotalPoints}</p>
+            <div class="level-badge">
+              <img src="${userLevel?.icon}" alt="${userLevel?.name}">
+              <span>Current Level: ${userLevel?.name || "Unranked"}</span>
+            </div>
+            <div class="progress">
+              <div class="progress-fill" style="width:${progressPercent}%;"></div>
+            </div>
+          </div>
+        `;
+
+        renderLevels(user.TotalPoints);
+
+      } catch (err) {
+        profileBox.innerHTML = "<p>❌ Error fetching data.</p>";
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
